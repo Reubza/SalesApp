@@ -1,0 +1,115 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Receipt</title>
+   
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+</head>
+<body>
+    <div class="container mt-4">
+        <h2>Enter Item Details</h2>
+        <form id="itemForm">
+            <div class="form-group">
+                <input type="text" class="form-control" id="itemQuantity" placeholder="Item Quantity" required>
+            </div>
+            <div class="form-group">
+                <input type="text" class="form-control" id="itemName" placeholder="Item Name" required>
+            </div>
+            <div class="form-group">
+                <input type="number" class="form-control" id="itemPrice" placeholder="Price" step="0.01" required>
+            </div>
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="isExempt">
+                <label class="form-check-label" for="isExempt">Books, Food, and Medical products</label>
+            </div>
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="isImported">
+                <label class="form-check-label" for="isImported">Imported</label>
+            </div>
+            <button type="submit" class="btn btn-primary">Add Item</button>
+        </form>
+
+        <button id="generateReceipt" class="btn btn-success mt-3" disabled>Generate Receipt</button>
+
+        <h2 class="mt-4">Items</h2>
+        <ul id="itemsList" class="list-unstyled"></ul>
+
+        <div id="receipt"></div>
+    </div>
+
+    <script>
+        var items = [];
+
+        $(document).ready(function () {
+            $('#itemForm').on('submit', function (e) {
+                e.preventDefault();
+                var itemQuantity = $('#itemQuantity').val();
+                var itemName = $('#itemName').val();
+                var itemPrice = parseFloat($('#itemPrice').val());
+                var isExempt = $('#isExempt').is(':checked');
+                var isImported = $('#isImported').is(':checked');
+
+                var item = {
+                    ItemQuantity: itemQuantity,
+                    Name: itemName,
+                    Price: itemPrice,
+                    IsExempt: isExempt,
+                    IsImported: isImported
+                };
+
+                items.push(item);
+                displayItems();
+
+                $('#itemQuantity').val('');
+                $('#itemName').val('');
+                $('#itemPrice').val('');
+                $('#isExempt').prop('checked', false);
+                $('#isImported').prop('checked', false);
+                $('#generateReceipt').prop('disabled', false);
+            });
+
+            $('#generateReceipt').on('click', function () {
+                console.log(this.items);
+                $.ajax({
+                    type: "POST",
+                    url: "https://localhost:44371/SalesTaxes",
+                    contentType: "application/json",
+                    data: JSON.stringify(items),
+                    success: function (response) {
+                        console.log(response);
+                        displayReceipt(response);
+                        items = []; // Clear items
+                        $('#itemsList').empty();
+                        $('#generateReceipt').prop('disabled', true);
+                    },
+                    error: function (err, status, error) {
+                        console.error("Error generating receipt: " + err.responseText);
+                    }
+                });
+            });
+        });
+
+        function displayItems() {
+            var list = $('#itemsList');
+            list.empty();
+            items.forEach(function (item) {
+                list.append('<li>' + item.ItemQuantity + ' ' + item.Name + ' - ' + item.Price.toFixed(2) + '</li>');
+            });
+        }
+
+        function displayReceipt(receipt) {
+            var receiptHtml = "<h2>Receipt Details</h2>";
+            receipt.items.forEach(function (item) {
+                receiptHtml += "<p>" + item.itemQuantity + ' ' + item.name + ": " + item.price.toFixed(2) + "</p>";
+            });
+            receiptHtml += "<p>Sales Taxes: " + receipt.totalSalesTaxes.toFixed(2) + "</p>";
+            receiptHtml += "<p>Total: " + receipt.totalAmount.toFixed(2) + "</p>";
+            $("#receipt").html(receiptHtml);
+        }
+    </script>
+
+</body>
+</html>
